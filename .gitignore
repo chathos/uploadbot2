@@ -1,4 +1,5 @@
-tmp_downloads
-vendor
-*.madeline
+/temporary_downloads
+/vendor
+*.session
 *.lock
+/config.php
