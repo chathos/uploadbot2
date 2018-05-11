@@ -2,12 +2,11 @@
     "name": "ilteoood/tele_uploader",
     "description": "A Telegram uploader bot",
     "type": "project",
-    "license": "AGPL-3.0",
+    "license": "MIT",
     "minimum-stability": "dev",
     "require": {
         "danog/madelineproto": "*",
-        "phpseclib/phpseclib": "dev-master#273ad17",
-        "kunalvarma05/dropbox-php-sdk": "^0.2.1"
+        "phpseclib/phpseclib": "dev-master#273ad17"
     },
     "authors": [
         {
