@@ -81,26 +81,27 @@ while (true) {
                     } else if (isset($update['update']['message']['message'])) {
                         $message = retrieveFromMessage($update, 'message');
                         if (startsWith($message, 'http://') || startsWith($message, 'https://') || startsWith($message, 'ftp://')) {
-                            // $MadelineProto->messages->sendMessage([
-                            //   'peer' => $destination,
-                            //   'message' => 'Downloading file...',
-                            //   'reply_to_msg_id' => retrieveFromMessage($update, 'id')
-                            // ]);
+                            $MadelineProto->messages->sendMessage([
+                              'peer' => $destination,
+                              'message' => 'Downloading file...',
+                              'reply_to_msg_id' => retrieveFromMessage($update, 'id')
+                            ]);
                             // TODO: Progress CallBack for Download Function
                             try {
-                                // $conversations[$destination] = downloadFile($message);
-                                // $MadelineProto->messages->sendMessage([
-                                //   'peer' => $destination,
-                                //   'message' => 'File downloaded!',
-                                //   'reply_to_msg_id' => retrieveFromMessage($update, 'id')
-                                // ]);
+                                $conversations[$destination] = downloadFile($TMP_DOWNLOADS, $message);
+                                $MadelineProto->messages->sendMessage([
+                                  'peer' => $destination,
+                                  'message' => 'File downloaded!',
+                                  'reply_to_msg_id' => retrieveFromMessage($update, 'id')
+                                ]);
                                 // successfully downloaded, now start the upload
                                 $id = $MadelineProto->messages->sendMessage([
                                   'peer' => $destination,
                                   'message' => 'upload will be started soon',
                                   'reply_to_msg_id' => retrieveFromMessage($update, 'id')
                                 ])['id'];
-                                $file_name = getFileName($message, "/");
+                                $file_name = $conversations[$destination]["fileName"];
+                                $file_path = $conversations[$destination]["downloadDir"];
                                 $caption = '' . $file_name . '       Uploaded using @MadeLineProto ';
                                 if((endsWith($message, ".mp4")) || (endsWith($message, ".mkv")) || (endsWith($message, ".avi"))) {
                                   $sentMessage = $MadelineProto->messages->sendMedia([
@@ -108,7 +109,7 @@ while (true) {
                                     'media' => [
                                       '_' => 'inputMediaUploadedDocument',
                                       'file' => new \danog\MadelineProto\FileCallback(
-                                        $message,
+                                        $file_path,
                                         function ($progress) use ($MadelineProto, $destination, $id) {
                                           $MadelineProto->messages->editMessage([
                                             'id' => $id,
@@ -135,7 +136,7 @@ while (true) {
                                     'media' => [
                                       '_' => 'inputMediaUploadedDocument',
                                       'file' => new \danog\MadelineProto\FileCallback(
-                                        $message,
+                                        $file_path,
                                         function ($progress) use ($MadelineProto, $destination, $id) {
                                           $MadelineProto->messages->editMessage([
                                             'id' => $id,
@@ -166,6 +167,13 @@ while (true) {
                                   'reply_to_msg_id' => retrieveFromMessage($update, 'id')
                                 ]);
                             }
+                        }
+                        else {
+                          $MadelineProto->messages->sendMessage([
+                            'peer' => $destination,
+                            'message' => 'Hi!, please send me any file url i will upload to telegram as file.',
+                            'reply_to_msg_id' => retrieveFromMessage($update, 'id')
+                          ]);
                         }
                     }
                 } catch (RPCErrorException $e) {
@@ -219,9 +227,9 @@ function downloadRemoteFile($url, $destination_file)
   fclose( $targetFile );
 }*/
 
-function downloadFile($message)
+function downloadFile($TMP_DOWNLOADS, $message)
 {
-  var_dump($message);
+    var_dump($message);
     $fileName = getFileName($message, "/");
     $downloadDir = $TMP_DOWNLOADS . "/" . $fileName;
     if (!file_exists($downloadDir)){
