@@ -8,3 +8,9 @@
   $BOT_SESSION = "YAUploadBot.session";
   // location to store the downloaded files
   $TMP_DOWNLOADS = __DIR__ . '/temporary_downloads';
+  // array to store who can use the bot
+  $OWNER_IDS = array(
+    "TELEGRAM ID 1",
+    "TELEGRAM ID 2",
+    "TELEGRAM ID 3"
+  );
