@@ -79,11 +79,11 @@ while (true) {
                             // TODO: Progress CallBack for Download Function 
                             try {
                                 $conversations[$destination] = downloadFile($message);
-                                $MadelineProto->messages->sendMessage([
+                                $id = $MadelineProto->messages->sendMessage([
                                   'peer' => $destination,
                                   'message' => 'File downloaded!',
                                   'reply_to_msg_id' => retrieveFromMessage($update, 'id')
-                                ]);
+                                ])['id'];
                                 // successfully downloaded, now start the upload
                                 $sentMessage = $MadelineProto->messages->sendMedia([
                                   'peer' => $destination,
@@ -91,8 +91,9 @@ while (true) {
                                     '_' => 'inputMediaUploadedDocument',
                                     'file' => new \danog\MadelineProto\FileCallback(
                                       $conversations[$destination]['downloadDir'],
-                                      function ($progress) use ($MadelineProto, $destination) {
-                                        $MadelineProto->messages->sendMessage([
+                                      function ($progress) use ($MadelineProto, $destination, $id) {
+                                        $MadelineProto->messages->editMessage([
+                                          'id' => $id,
                                           'peer' => $destination,
                                           'message' => 'Upload progress: '.$progress.'%'
                                         ]);
