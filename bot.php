@@ -8,9 +8,6 @@ use danog\MadelineProto\API;
 use danog\MadelineProto\Exception;
 use danog\MadelineProto\Logger;
 
-const BOT_SESSION = "YAUploadBot.session";
-const TMP_DOWNLOADS = __DIR__ . '/temporary_downloads';
-
 set_include_path(get_include_path() . ':' . realpath(dirname(__FILE__) . '/MadelineProto/'));
 
 $settings = [
@@ -21,22 +18,26 @@ $settings = [
 ];
 
 try {
-    $MadelineProto = new API(BOT_SESSION, $settings);
+    $MadelineProto = new API($BOT_SESSION, $settings);
 } catch (Exception $e) {
     $MadelineProto = new API($settings);
 }
 
 $authorization = $MadelineProto->bot_login($BOT_TOKEN);
 
-if (!file_exists(TMP_DOWNLOADS)){
-  mkdir(TMP_DOWNLOADS);
+if (!file_exists($TMP_DOWNLOADS)){
+  mkdir($TMP_DOWNLOADS);
 }
 
-$MadelineProto->session = BOT_SESSION;
+$MadelineProto->session = $BOT_SESSION;
 $offset = 0;
 $conversations = array();
 while (true) {
-    $updates = $MadelineProto->get_updates(['offset' => $offset, 'limit' => 50, 'timeout' => 0]);
+    $updates = $MadelineProto->get_updates([
+      'offset' => $offset,
+      'limit' => 50,
+      'timeout' => 0
+    ]);
     Logger::log([$updates]);
     foreach ($updates as $update) {
         $offset = $update['update_id'] + 1;
@@ -50,14 +51,23 @@ while (true) {
                     $destination = retrieveDestination($update);
                     if (isset($update['update']['message']['media']) && (retrieveFromMessage($update, 'media')['_'] == 'messageMediaPhoto' || retrieveFromMessage($update, 'media')['_'] == 'messageMediaDocument')) {
                         $time = time();
-                        $MadelineProto->messages->sendMessage([
+                        $id = $MadelineProto->messages->sendMessage([
                           'peer' => $destination,
                           'message' => 'Downloading file...',
                           'reply_to_msg_id' => retrieveFromMessage($update, 'id')
-                        ]);
+                        ])['id'];
                         $file = $MadelineProto->download_to_file(
-                          $update['update']['message']['media'],
-                          TMP_DOWNLOADS . DIRECTORY_SEPARATOR . $update['update']['message']['media']['document']['attributes'][0]['file_name']
+                          new \danog\MadelineProto\FileCallback(
+                            $update['update']['message']['media'],
+                            function ($progress) use ($MadelineProto, $destination, $id) {
+                              $MadelineProto->messages->editMessage([
+                                'id' => $id,
+                                'peer' => $peer,
+                                'message' => 'Download progress: '.$progress.'%'
+                              ]);
+                            }
+                          ),
+                          $TMP_DOWNLOADS . "/" . $update['update']['message']['media']['document']['attributes'][0]['file_name']
                         );
                         $MadelineProto->messages->sendMessage([
                           'peer' => $destination,
@@ -76,39 +86,77 @@ while (true) {
                               'message' => 'Downloading file...',
                               'reply_to_msg_id' => retrieveFromMessage($update, 'id')
                             ]);
-                            // TODO: Progress CallBack for Download Function 
+                            // TODO: Progress CallBack for Download Function
                             try {
-                                $conversations[$destination] = downloadFile($message);
+                                $conversations[$destination] = downloadFile($TMP_DOWNLOADS, $message);
                                 $MadelineProto->messages->sendMessage([
                                   'peer' => $destination,
                                   'message' => 'File downloaded!',
                                   'reply_to_msg_id' => retrieveFromMessage($update, 'id')
                                 ]);
                                 // successfully downloaded, now start the upload
-                                $sentMessage = $MadelineProto->messages->sendMedia([
+                                $id = $MadelineProto->messages->sendMessage([
                                   'peer' => $destination,
-                                  'media' => [
-                                    '_' => 'inputMediaUploadedDocument',
-                                    'file' => new \danog\MadelineProto\FileCallback(
-                                      $conversations[$destination]['downloadDir'],
-                                      function ($progress) use ($MadelineProto, $destination) {
-                                        $MadelineProto->messages->sendMessage([
-                                          'peer' => $destination,
-                                          'message' => 'Upload progress: '.$progress.'%'
-                                        ]);
-                                      }
-                                    ),
-                                    'attributes' => [
-                                      [
-                                        '_' => 'documentAttributeVideo',
-                                        'round_message' => false,
-                                        'supports_streaming' => true
+                                  'message' => 'upload will be started soon',
+                                  'reply_to_msg_id' => retrieveFromMessage($update, 'id')
+                                ])['id'];
+                                $file_name = $conversations[$destination]["fileName"];
+                                $file_path = $conversations[$destination]["downloadDir"];
+                                $caption = '' . $file_name . '       Uploaded using @MadeLineProto ';
+                                if((endsWith($message, ".mp4")) || (endsWith($message, ".mkv")) || (endsWith($message, ".avi"))) {
+                                  $sentMessage = $MadelineProto->messages->sendMedia([
+                                    'peer' => $destination,
+                                    'media' => [
+                                      '_' => 'inputMediaUploadedDocument',
+                                      'file' => new \danog\MadelineProto\FileCallback(
+                                        $file_path,
+                                        function ($progress) use ($MadelineProto, $destination, $id) {
+                                          $MadelineProto->messages->editMessage([
+                                            'id' => $id,
+                                            'peer' => $destination,
+                                            'message' => 'Upload progress: '.$progress.'%'
+                                          ]);
+                                        }
+                                      ),
+                                      'attributes' => [
+                                        [
+                                          '_' => 'documentAttributeVideo',
+                                          'round_message' => false,
+                                          'supports_streaming' => true
+                                        ]
                                       ]
-                                    ]
-                                  ],
-                                  'message' => 'Uploaded using @MadeLineProto ',
-                                  'parse_mode' => 'Markdown'
-                                ]);
+                                    ],
+                                    'message' => $caption,
+                                    'parse_mode' => 'Markdown'
+                                  ]);
+                                }
+                                else {
+                                  $sentMessage = $MadelineProto->messages->sendMedia([
+                                    'peer' => $destination,
+                                    'media' => [
+                                      '_' => 'inputMediaUploadedDocument',
+                                      'file' => new \danog\MadelineProto\FileCallback(
+                                        $file_path,
+                                        function ($progress) use ($MadelineProto, $destination, $id) {
+                                          $MadelineProto->messages->editMessage([
+                                            'id' => $id,
+                                            'peer' => $destination,
+                                            'message' => 'Upload progress: '.$progress.'%'
+                                          ]);
+                                        }
+                                      ),
+                                      'attributes' => [
+                                        [
+                                          '_' => 'documentAttributeFilename',
+                                          'file_name' => "@MadeLineProto " . $file_name
+                                        ]
+                                      ]
+                                    ],
+                                    'message' => $caption,
+                                    'parse_mode' => 'Markdown'
+                                  ]);
+                                }
+
                                 // var_dump($sentMessage);
                                 // TODO: delete the original file, after successful UPLOAD
                             } catch (Exception $e) {
@@ -119,6 +167,13 @@ while (true) {
                                   'reply_to_msg_id' => retrieveFromMessage($update, 'id')
                                 ]);
                             }
+                        }
+                        else {
+                          $MadelineProto->messages->sendMessage([
+                            'peer' => $destination,
+                            'message' => 'Hi!, please send me any file url i will upload to telegram as file.',
+                            'reply_to_msg_id' => retrieveFromMessage($update, 'id')
+                          ]);
                         }
                     }
                 } catch (RPCErrorException $e) {
@@ -134,7 +189,7 @@ while (true) {
 function getFileName($filePath, $separator)
 {
     $splitted = explode($separator, $filePath);
-    return $splitted[count($splitted) - 1];
+    return urldecode($splitted[count($splitted) - 1]);
 }
 
 /*function progressCallback( $download_size, $downloaded_size, $upload_size, $uploaded_size )
@@ -172,20 +227,30 @@ function downloadRemoteFile($url, $destination_file)
   fclose( $targetFile );
 }*/
 
-function downloadFile($message)
+function downloadFile($TMP_DOWNLOADS, $message)
 {
-  var_dump($message);
+    var_dump($message);
     $fileName = getFileName($message, "/");
-    $downloadDir = TMP_DOWNLOADS . DIRECTORY_SEPARATOR . $fileName;
+    $downloadDir = $TMP_DOWNLOADS . "/" . $fileName;
     if (!file_exists($downloadDir)){
       file_put_contents($downloadDir, fopen($message, 'r'));
     }
     return array('downloadDir' => $downloadDir, 'fileName' => $fileName);
 }
 
-function startsWith($string, $toCheck)
-{
-    return substr($string, 0, strlen($toCheck)) === $toCheck;
+function startsWith($haystack, $needle) {
+   $length = strlen($needle);
+   return (substr($haystack, 0, $length) === $needle);
+}
+
+// <=> https://stackoverflow.com/a/834355/4723940
+
+function endsWith($haystack, $needle) {
+    $length = strlen($needle);
+    if ($length == 0) {
+        return true;
+    }
+    return (substr($haystack, -$length) === $needle);
 }
 
 function retrieveFromMessage($update, $toRetrieve)
