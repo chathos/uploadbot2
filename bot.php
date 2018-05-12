@@ -8,9 +8,6 @@ use danog\MadelineProto\API;
 use danog\MadelineProto\Exception;
 use danog\MadelineProto\Logger;
 
-const BOT_SESSION = "YAUploadBot.session";
-const TMP_DOWNLOADS = __DIR__ . '/temporary_downloads';
-
 set_include_path(get_include_path() . ':' . realpath(dirname(__FILE__) . '/MadelineProto/'));
 
 $settings = [
