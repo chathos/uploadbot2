@@ -10,6 +10,11 @@ use danog\MadelineProto\Logger;
 
 set_include_path(get_include_path() . ':' . realpath(dirname(__FILE__) . '/MadelineProto/'));
 
+if (!file_exists('madeline.php')) {
+    copy('https://phar.madelineproto.xyz/madeline.php', 'madeline.php');
+}
+include 'madeline.php';
+
 $settings = [
   'app_info' => [
     'api_id' => $APP_ID,
