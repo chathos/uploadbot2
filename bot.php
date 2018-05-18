@@ -77,7 +77,7 @@ while (true) {
                           ]);
                           $conversations[$destination] = array(
                             'downloadDir' => $file,
-                            'fileName' => getFileName($file, DIRECTORY_SEPARATOR)
+                            'fileName' => getFile_Name($file, DIRECTORY_SEPARATOR)
                           );
                       } else if (isset($update['update']['message']['message'])) {
                           $message = retrieveFromMessage($update, 'message');
@@ -196,9 +196,37 @@ while (true) {
     }
 }
 
-function getFileName($filePath, $separator)
+function getFileName($fileURL)
 {
-    $splitted = explode($separator, $filePath);
+    $curl = curl_init($fileURL);
+  curl_setopt($curl, CURLOPT_HEADER, true);
+  curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+  curl_setopt($curl, CURLOPT_CUSTOMREQUEST, 'HEAD');
+  
+  if (($response = curl_exec($curl)) !== false)
+  {
+    if (curl_getinfo($curl, CURLINFO_HTTP_CODE) == '200')
+    {
+      // var_dump($response);
+      curl_close($curl);
+      $reDispo = '/^Content-Disposition: .*?filename=(?<f>[^\s]+|\x22[^\x22]+\x22)\x3B?.*$/m';
+      if (preg_match($reDispo, $response, $mDispo))
+      {
+        $filename = trim($mDispo['f'],' ";');
+        // https://stackoverflow.com/a/6781641
+        return $filename;
+      }
+    }
+  }
+  else {
+   // gracefully fallback
+    
+    return getFile_Name($fielURL, "/");
+  }
+}
+
+function getFile_Name($fileName, $seperator) {
+  $splitted = explode($seperator, $fileName);
     return urldecode($splitted[count($splitted) - 1]);
 }
 
@@ -240,7 +268,7 @@ function downloadRemoteFile($url, $destination_file)
 function downloadFile($TMP_DOWNLOADS, $message)
 {
     var_dump($message);
-    $fileName = getFileName($message, "/");
+    $fileName = getFileName($message);
     $downloadDir = $TMP_DOWNLOADS . "/" . $fileName;
     if (!file_exists($downloadDir)){
       file_put_contents($downloadDir, fopen($message, 'r'));
