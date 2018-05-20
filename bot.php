@@ -104,7 +104,8 @@ while (true) {
                                   $file_name = $conversations[$destination]["fileName"];
                                   $file_path = $conversations[$destination]["downloadDir"];
                                   $caption = '' . $file_name . '       Uploaded using @MadeLineProto ';
-                                  if((endsWith($message, ".mp4")) || (endsWith($message, ".mkv")) || (endsWith($message, ".avi"))) {
+                                  $mimetype = mime_content_type($file_path);
+                                  if(startsWith($mimetype, "video")) {
                                     $sentMessage = $MadelineProto->messages->sendMedia([
                                       'peer' => $destination,
                                       'media' => [
@@ -199,7 +200,12 @@ while (true) {
 function getFileName($filePath, $separator)
 {
     $splitted = explode($separator, $filePath);
-    return urldecode($splitted[count($splitted) - 1]);
+    $temporary_file_name = urldecode($splitted[count($splitted) - 1]);
+    if (strpos($temporary_file_name, "?") !== false) {
+        $veendum_splitted = explode("?", $temporary_file_name);
+        $temporary_file_name = $veendum_splitted[0];
+    }
+    return urldecode($temporary_file_name);
 }
 
 /*function progressCallback( $download_size, $downloaded_size, $upload_size, $uploaded_size )
