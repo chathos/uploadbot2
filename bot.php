@@ -77,7 +77,7 @@ while (true) {
                           ]);
                           $conversations[$destination] = array(
                             'downloadDir' => $file,
-                            'fileName' => getFileName($file, DIRECTORY_SEPARATOR)
+                            'fileName' => getFile_Name($file, DIRECTORY_SEPARATOR)
                           );
                       } else if (isset($update['update']['message']['message'])) {
                           $message = retrieveFromMessage($update, 'message');
@@ -197,8 +197,9 @@ while (true) {
     }
 }
 
-function getFileName($filePath, $separator)
+function getFileName($fileURL)
 {
+
     $splitted = explode($separator, $filePath);
     $temporary_file_name = urldecode($splitted[count($splitted) - 1]);
     if (strpos($temporary_file_name, "?") !== false) {
@@ -206,6 +207,7 @@ function getFileName($filePath, $separator)
         $temporary_file_name = $veendum_splitted[0];
     }
     return urldecode($temporary_file_name);
+
 }
 
 /*function progressCallback( $download_size, $downloaded_size, $upload_size, $uploaded_size )
@@ -246,7 +248,7 @@ function downloadRemoteFile($url, $destination_file)
 function downloadFile($TMP_DOWNLOADS, $message)
 {
     var_dump($message);
-    $fileName = getFileName($message, "/");
+    $fileName = getFileName($message);
     $downloadDir = $TMP_DOWNLOADS . "/" . $fileName;
     if (!file_exists($downloadDir)){
       file_put_contents($downloadDir, fopen($message, 'r'));

@@ -5,7 +5,7 @@
     "license": "MIT",
     "minimum-stability": "dev",
     "require": {
-        "danog/madelineproto": "*",
+        "danog/madelineproto": "dev-master",
         "phpseclib/phpseclib": "dev-master#273ad17"
     },
     "authors": [
