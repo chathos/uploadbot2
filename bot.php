@@ -104,7 +104,8 @@ while (true) {
                                   $file_name = $conversations[$destination]["fileName"];
                                   $file_path = $conversations[$destination]["downloadDir"];
                                   $caption = '' . $file_name . '       Uploaded using @MadeLineProto ';
-                                  if((endsWith($message, ".mp4")) || (endsWith($message, ".mkv")) || (endsWith($message, ".avi"))) {
+                                  $mimetype = mime_content_type($file_path);
+                                  if(startsWith($mimetype, "video")) {
                                     $sentMessage = $MadelineProto->messages->sendMedia([
                                       'peer' => $destination,
                                       'media' => [
@@ -198,36 +199,15 @@ while (true) {
 
 function getFileName($fileURL)
 {
-    $curl = curl_init($fileURL);
-  curl_setopt($curl, CURLOPT_HEADER, true);
-  curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-  curl_setopt($curl, CURLOPT_CUSTOMREQUEST, 'HEAD');
-  
-  if (($response = curl_exec($curl)) !== false)
-  {
-    if (curl_getinfo($curl, CURLINFO_HTTP_CODE) == '200')
-    {
-      // var_dump($response);
-      curl_close($curl);
-      $reDispo = '/^Content-Disposition: .*?filename=(?<f>[^\s]+|\x22[^\x22]+\x22)\x3B?.*$/m';
-      if (preg_match($reDispo, $response, $mDispo))
-      {
-        $filename = trim($mDispo['f'],' ";');
-        // https://stackoverflow.com/a/6781641
-        return $filename;
-      }
-    }
-  }
-  else {
-   // gracefully fallback
-    
-    return getFile_Name($fielURL, "/");
-  }
-}
 
-function getFile_Name($fileName, $seperator) {
-  $splitted = explode($seperator, $fileName);
-    return urldecode($splitted[count($splitted) - 1]);
+    $splitted = explode($separator, $filePath);
+    $temporary_file_name = urldecode($splitted[count($splitted) - 1]);
+    if (strpos($temporary_file_name, "?") !== false) {
+        $veendum_splitted = explode("?", $temporary_file_name);
+        $temporary_file_name = $veendum_splitted[0];
+    }
+    return urldecode($temporary_file_name);
+
 }
 
 /*function progressCallback( $download_size, $downloaded_size, $upload_size, $uploaded_size )
